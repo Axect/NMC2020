@@ -1,24 +1,31 @@
 #![feature(trait_alias)]
-use std::ops::{Add, Sub, Mul, Index, IndexMut};
+use std::ops::{Add, Index, IndexMut, Mul, Sub, Div};
+
+pub trait AddNum = Copy + Clone + Add<Output = Self>;
+pub trait SubNum = Copy + Clone + Sub<Output = Self>;
+pub trait Num = Copy 
+    + Clone
+    + Default
+    + Add<Output = Self> 
+    + Sub<Output = Self> 
+    + Mul<Output = Self>
+    + Div<Output = Self>;
 
 fn main() {
-    let mut a = Matrix::new(vec![vec![1,2],vec![3,4]]);
-    println!("{:?}", a);
-    println!("{}", a[(1, 0)]);
-    a[(1, 0)] = 5;
-    println!("{:?}", a);
+    let a: Matrix<f64> = zeros(1000, 1000);
+    let b: Matrix<f64> = zeros(1000, 1000);
+    let c = a * b;
+    println!("{}", c[(50, 50)]);
 }
 
 #[derive(Debug, Clone)]
 pub struct Matrix<T> {
-    data: Vec<Vec<T>>
+    data: Vec<Vec<T>>,
 }
 
 impl<T> Matrix<T> {
     pub fn new(data: Vec<Vec<T>>) -> Self {
-        Matrix {
-            data
-        }
+        Matrix { data }
     }
 
     pub fn nrow(&self) -> usize {
@@ -52,18 +59,14 @@ impl<T: Copy + Clone + Add<Output = T>> Add<Matrix<T>> for Matrix<T> {
         assert_eq!(c, rhs.ncol());
 
         let mut result = self.clone();
-        for i in 0 .. r {
-            for j in 0 .. c {
+        for i in 0..r {
+            for j in 0..c {
                 result[(i, j)] = result[(i, j)] + rhs[(i, j)];
             }
         }
         result
     }
 }
-
-pub trait AddNum = Copy + Clone + Add<Output = Self>;
-pub trait SubNum = Copy + Clone + Sub<Output = Self>;
-pub trait MulNum = Copy + Clone + Mul<Output = Self>;
 
 impl<T: SubNum> Sub<Matrix<T>> for Matrix<T> {
     type Output = Self;
@@ -74,8 +77,8 @@ impl<T: SubNum> Sub<Matrix<T>> for Matrix<T> {
         assert_eq!(c, rhs.ncol());
 
         let mut result = self.clone();
-        for i in 0 .. r {
-            for j in 0 .. c {
+        for i in 0..r {
+            for j in 0..c {
                 result[(i, j)] = result[(i, j)] - rhs[(i, j)];
             }
         }
@@ -83,9 +86,31 @@ impl<T: SubNum> Sub<Matrix<T>> for Matrix<T> {
     }
 }
 
-impl<T: MulNum> Mul<Matrix<T>> for Matrix<T> {
+/// Basic matrix multiplication
+impl<T: Num> Mul<Matrix<T>> for Matrix<T> {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
-        unimplemented!()
+        let r = self.nrow();
+        let c = rhs.ncol();
+        let n = self.ncol();
+        assert_eq!(n, rhs.nrow());
+
+        let mut result = Matrix::new(vec![vec![T::default(); c]; r]);
+
+        for i in 0..r {
+            for j in 0..c {
+                let mut s = T::default();
+                for k in 0..n {
+                    s = s + self[(i, k)] * rhs[(k, j)];
+                }
+                result[(i, j)] = s;
+            }
+        }
+        result
     }
+}
+
+/// Zeros
+pub fn zeros<T: Default + Copy + Clone>(r: usize, c: usize) -> Matrix<T> {
+    Matrix::new(vec![vec![T::default(); c]; r])
 }
