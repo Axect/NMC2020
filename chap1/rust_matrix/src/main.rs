@@ -1,5 +1,6 @@
 #![feature(trait_alias)]
 use std::ops::{Add, Index, IndexMut, Mul, Sub, Div};
+use std::env::args;
 
 pub trait AddNum = Copy + Clone + Add<Output = Self>;
 pub trait SubNum = Copy + Clone + Sub<Output = Self>;
@@ -12,10 +13,14 @@ pub trait Num = Copy
     + Div<Output = Self>;
 
 fn main() {
-    let a: Matrix<f64> = zeros(1000, 1000);
-    let b: Matrix<f64> = zeros(1000, 1000);
+    let args: Vec<String> = args().collect();
+    let row: usize = args[1].parse().unwrap();
+    let col: usize = args[2].parse().unwrap();
+
+    let a: Matrix<f64> = zeros(row, col);
+    let b: Matrix<f64> = zeros(row, col);
     let c = a * b;
-    println!("{}", c[(50, 50)]);
+    println!("{}", c[(row/2, col/2)]);
 }
 
 #[derive(Debug, Clone)]
