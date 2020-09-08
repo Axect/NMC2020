@@ -1,4 +1,7 @@
 #![feature(trait_alias)]
+extern crate matrixmultiply;
+use matrixmultiply::dgemm;
+
 use std::ops::{Add, Index, IndexMut, Mul, Sub, Div};
 use std::env::args;
 
@@ -19,7 +22,8 @@ fn main() {
 
     let a: Matrix<f64> = zeros(row, col);
     let b: Matrix<f64> = zeros(row, col);
-    let c = a * b;
+    //let c = a * b;
+    let c = matmul(&a, &b);
     println!("{}", c[(row/2, col/2)]);
 }
 
@@ -118,4 +122,42 @@ impl<T: Num> Mul<Matrix<T>> for Matrix<T> {
 /// Zeros
 pub fn zeros<T: Default + Copy + Clone>(r: usize, c: usize) -> Matrix<T> {
     Matrix::new(vec![vec![T::default(); c]; r])
+}
+
+pub fn matmul(a: &Matrix<f64>, b: &Matrix<f64>) -> Matrix<f64> {
+    let m = a.nrow();
+    let k = a.ncol();
+    let n = b.ncol();
+    let (rsa, csa) = (k as isize, 1isize);
+    let (rsb, csb) = (n as isize, 1isize);
+    let (rsc, csc) = (n as isize, 1isize);
+
+    let a_flat: Vec<f64> = a.data.clone().into_iter().flatten().collect();
+    let b_flat: Vec<f64> = b.data.clone().into_iter().flatten().collect();
+    let mut c_flat: Vec<f64> = vec![0f64; m * n];
+
+    unsafe {
+        matrixmultiply::dgemm(
+            m,
+            k,
+            n,
+            1f64,
+            a_flat.as_ptr(),
+            rsa,
+            csa,
+            b_flat.as_ptr(),
+            rsb,
+            csb,
+            0f64,
+            c_flat.as_mut_ptr(),
+            rsc,
+            csc,
+        )
+    }
+
+    let mut c_data: Vec<Vec<f64>> = vec![vec![0f64; n]; m];
+    for i in 0 .. m {
+        c_data[i] = c_flat[n * i .. n * (i+1)].to_vec();
+    }
+    Matrix::new(c_data)
 }
